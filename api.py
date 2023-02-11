@@ -28,7 +28,7 @@ yts_url = 'https://www.youtube.com/shorts/'
 # Define the API endpoint
 # endpoint call example: http://127.0.0.1:8000/classify_audio?url=https://www.youtube.com/watch?v=jYUtL-LcMsk&chunk_size=2
 @app.get("/classify_audio")
-async def classify_audio_from_url(url: str, chunk_size: int = 5):
+async def classify_audio_from_url(url: str, chunk_size: int = 5,agg_level: int = 1):
 
     try:
 
@@ -68,7 +68,7 @@ async def classify_audio_from_url(url: str, chunk_size: int = 5):
             filename = "./downloads/{}.wav".format(video_id)
 
             # Classify the audio
-            prediction, chartData = predict(filename, chunk_size)
+            prediction, chartData = predict(filename, chunk_size, agg_level)
 
             # delete the file
             os.remove(filename)
@@ -103,7 +103,7 @@ async def classify_audio_from_url(url: str, chunk_size: int = 5):
                 os.remove(mp3filename)
                     
             # Classify the audio
-            prediction, chartData = predict(filename, chunk_size)
+            prediction, chartData = predict(filename, chunk_size, agg_level)
 
             # delete the file
             os.remove(filename)

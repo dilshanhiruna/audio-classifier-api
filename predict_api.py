@@ -15,7 +15,7 @@ GROWLING_INDEX=1
 NOR_BARK_INDEX=2
 AGG_BARK_INDEX=3
 
-USE_RULE_BASE=False
+
 
 preffered_aggression_index = -1 # refer final_aggression_detection() for more info
 
@@ -40,7 +40,7 @@ def load_wav_16k_mono(filename):
 
 
 # get wav files and predict using model
-def predict(file_path, chunk_size=5):
+def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
     print("Predicting file: {}".format(file_path))
 
@@ -107,11 +107,7 @@ def predict(file_path, chunk_size=5):
                     result["predicted_sound"] = inferred_class
                     result["predicted_sound_score"] = top_score.numpy().item()
 
-                    if inferred_class == "L-S1":
-                        chartData["noOfNonAggressiveChunks"] += 1
-                    elif inferred_class == "L-S2":
-                        chartData["noOfAggressiveChunks"] += 1
-                    elif inferred_class == "CH":
+                    if inferred_class == "CH":
                         chartData["noOfWhinningChunks"] += 1
                     elif inferred_class == "GR":
                         chartData["noOfGrowlingChunks"] += 1
@@ -124,7 +120,7 @@ def predict(file_path, chunk_size=5):
                     if predicted_index == NOR_BARK_INDEX or predicted_index == AGG_BARK_INDEX:
 
                         # if using the rule base then get the result
-                        if USE_RULE_BASE:
+                        if USE_RULE_BASE == 2:
 
                             rule_base_result = aggresive_sound_detected(file_path)
 
@@ -133,16 +129,29 @@ def predict(file_path, chunk_size=5):
                             # get final prediction
                             is_aggressive, index = final_aggression_detection(rule_base_result, predicted_index)
 
+                            if is_aggressive:
+                                chartData["noOfAggressiveChunks"] += 1
+                            else:
+                                chartData["noOfNonAggressiveChunks"] += 1
+
                             result["aggression_index"] = index
                             
                             # final prediction
                             if is_aggressive and index > preffered_aggression_index:
                                 print("\/\/\/\/\ Aggressive bark detected, index : ", index)
                                 result["is_aggressive"] = True
+                                result["predicted_sound"] = classes[AGG_BARK_INDEX]
                             else:
                                 print("--------- Aggressive bark not detected, index : ", index)
                                 result["is_aggressive"] = False
+                                result["predicted_sound"] = classes[NOR_BARK_INDEX]
                         else:
+
+                            if inferred_class == "L-S1":
+                                chartData["noOfNonAggressiveChunks"] += 1
+                            elif inferred_class == "L-S2":
+                                chartData["noOfAggressiveChunks"] += 1
+
                             if predicted_index == AGG_BARK_INDEX:
                                 print("\/\/\/\/\ Aggressive bark detected")
                                 result["is_aggressive"] = True
