@@ -167,3 +167,11 @@ async def convert_yt_to_audio(url: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# health check endpoint
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+    
