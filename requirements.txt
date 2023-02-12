@@ -1,0 +1,12 @@
+fastapi
+numpy
+tensorflow
+tensorflow-hub
+pandas
+tensorflow-io
+youtube-dl
+soundfile
+requests
+matplotlib
+scipy
+librosa
