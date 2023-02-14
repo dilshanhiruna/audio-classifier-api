@@ -1,12 +1,9 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException, responses
+from fastapi import FastAPI, HTTPException, responses
 from fastapi.middleware.cors import CORSMiddleware
 import youtube_dl
-import tempfile
 import soundfile as sf
 import requests
-import numpy as np
-import tensorflow as tf
 from predict_api import predict
 
 app = FastAPI()
