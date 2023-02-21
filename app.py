@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException, responses
 from fastapi.middleware.cors import CORSMiddleware
-import youtube_dl
+import yt_dlp
 import soundfile as sf
 import requests
 from predict_api import predict
@@ -57,7 +57,7 @@ async def classify_audio_from_url(url: str, chunk_size: int = 5,agg_level: int =
             }
 
             # take the id 
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
             print(video_id)
@@ -144,7 +144,7 @@ async def convert_yt_to_audio(url: str):
             }
 
         # take the id 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
         # get the id from the url
