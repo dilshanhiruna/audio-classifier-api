@@ -96,7 +96,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
             print(f'[YAMNet] The main sound is: {inferred_class} ({top_score})')
             result["main_sound"] = inferred_class
-            result["main_sound_score"] = top_score
+            result["main_sound_score"] = top_score.item()
 
             if inferred_class in valid_classes:
 
@@ -116,7 +116,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
                     print(f'Predicted sound is: {inferred_class} ({top_score})')
                     result["predicted_sound"] = inferred_class
-                    result["predicted_sound_score"] = top_score
+                    result["predicted_sound_score"] = top_score.item()
 
                     if inferred_class == "CH":
                         chartData["noOfWhinningChunks"] += 1
