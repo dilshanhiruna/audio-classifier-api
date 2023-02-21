@@ -1,13 +1,13 @@
-import tensorflow as tf
-import tensorflow_hub as hub
 import pandas as pd
+import numpy as np
 from rule_base_api import aggresive_sound_detected
-import tensorflow_io as tfio
+import tensorflow.lite as tflite
+import librosa
 
 
 
-yamnet_model_handle = 'models/yamnet'
-MODEL="models/yamnet_model_2"
+yamnet_model_handle = 'models/lite-model_yamnet_tflite_1.tflite'
+MODEL="models/yamnet_model_2.tflite"
 classes = ["CH","GR","L-S1","L-S2"]
 valid_classes = ["Animal","Domestic animals, pets", "Dog","Crying, sobbing","Whimper","Bark","Bow-wow","Growling","Whimper (dog)", "Livestock, farm animals, working animals","Groan","Grunt"]
 WHINNING_INDEX=0
@@ -20,23 +20,24 @@ AGG_BARK_INDEX=3
 preffered_aggression_index = -1 # refer final_aggression_detection() for more info
 
 
-reloaded_model = tf.saved_model.load(MODEL)
+yamnet_model = tflite.Interpreter(model_path=yamnet_model_handle)
+yamnet_model.allocate_tensors()
 
-yamnet_model = hub.load(yamnet_model_handle)
 
-class_map_path = yamnet_model.class_map_path().numpy().decode('utf-8')
-class_names =list(pd.read_csv(class_map_path)['display_name'])
 
-def load_wav_16k_mono(filename):
-    """ Load a WAV file, convert it to a float tensor, resample to 16 kHz single-channel audio. """
-    file_contents = tf.io.read_file(filename)
-    wav, sample_rate = tf.audio.decode_wav(
-          file_contents,
-          desired_channels=1)
-    wav = tf.squeeze(wav, axis=-1)
-    sample_rate = tf.cast(sample_rate, dtype=tf.int64)
-    wav = tfio.audio.resample(wav, rate_in=sample_rate, rate_out=16000)
-    return wav
+my_model = tflite.Interpreter(model_path=MODEL)
+my_model.allocate_tensors()
+
+
+# Get input and output tensors
+yamnet_input_details = yamnet_model.get_input_details()
+yamnet_output_details = yamnet_model.get_output_details()
+
+my_model_input_details = my_model.get_input_details()
+my_model_output_details = my_model.get_output_details()
+
+class_map_path = pd.read_csv("models/yamnet_class_map.csv")
+class_names = class_map_path['display_name'].tolist()
 
 
 # get wav files and predict using model
@@ -58,7 +59,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
     try:
 
         # load wav file
-        wav_data = load_wav_16k_mono(file_path)
+        wav_data, sr = librosa.load(file_path, sr=16000, mono=True)
 
         chunk_size = 16000 * chunk_size
         num_chunks = wav_data.shape[0] // chunk_size
@@ -81,22 +82,32 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
                 "aggression_index": -1
             }
 
-            scores, embeddings, spectrogram = yamnet_model(chunk)
-            class_scores = tf.reduce_mean(scores, axis=0)
-            top_class = tf.math.argmax(class_scores)
+            # Run YAMNet model
+            yamnet_model.resize_tensor_input(yamnet_input_details[0]['index'], chunk.shape)
+            yamnet_model.allocate_tensors()
+            yamnet_model.set_tensor(yamnet_input_details[0]['index'], chunk)
+            yamnet_model.invoke()
+            scores = yamnet_model.get_tensor(yamnet_output_details[0]['index'])
+            class_scores = np.mean(scores, axis=0)
+            top_class = np.argmax(class_scores)
             inferred_class = class_names[top_class]
             top_score = class_scores[top_class]
 
+
             print(f'[YAMNet] The main sound is: {inferred_class} ({top_score})')
             result["main_sound"] = inferred_class
-            result["main_sound_score"] = top_score.numpy().item()
+            result["main_sound_score"] = top_score
 
             if inferred_class in valid_classes:
 
-                reloaded_results = reloaded_model(chunk)
-                top_class = tf.math.argmax(reloaded_results)
+                my_model.resize_tensor_input(my_model_input_details[0]['index'], chunk.shape)
+                my_model.allocate_tensors()
+                my_model.set_tensor(my_model_input_details[0]['index'], chunk)
+                my_model.invoke()
+                my_model_results = my_model.get_tensor(my_model_output_details[0]['index'])
+                top_class = np.argmax(my_model_results)
                 inferred_class = classes[top_class]
-                class_probabilities = tf.nn.softmax(reloaded_results, axis=-1)
+                class_probabilities = np.squeeze(my_model_results)
                 top_score = class_probabilities[top_class]
 
                 if top_score:
@@ -105,7 +116,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
                     print(f'Predicted sound is: {inferred_class} ({top_score})')
                     result["predicted_sound"] = inferred_class
-                    result["predicted_sound_score"] = top_score.numpy().item()
+                    result["predicted_sound_score"] = top_score
 
                     if inferred_class == "CH":
                         chartData["noOfWhinningChunks"] += 1
@@ -203,4 +214,4 @@ if __name__ == "__main__":
     #         file_path = os.path.join(dirpath, f)
     #         predict(file_path)
 
-    predict("downloads\jYUtL-LcMsk.wav")
+    predict("downloads\event.wav")
