@@ -1,3 +1,4 @@
+import librosa
 import tensorflow as tf
 import tensorflow_hub as hub
 import pandas as pd
@@ -59,6 +60,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
         # load wav file
         wav_data = load_wav_16k_mono(file_path)
+        # wav_data, sr = librosa.load(file_path, sr=16000, mono=True)
 
         chunk_size = 16000 * chunk_size
         num_chunks = wav_data.shape[0] // chunk_size
@@ -119,7 +121,7 @@ def predict(file_path, chunk_size=5,USE_RULE_BASE=1):
 
                     if predicted_index == NOR_BARK_INDEX or predicted_index == AGG_BARK_INDEX:
 
-                        # if using the rule base then get the result
+                        # if using the rule base to get the result
                         if USE_RULE_BASE == 2:
 
                             rule_base_result = aggresive_sound_detected(file_path)
@@ -203,4 +205,4 @@ if __name__ == "__main__":
     #         file_path = os.path.join(dirpath, f)
     #         predict(file_path)
 
-    predict("downloads\jYUtL-LcMsk.wav")
+    predict("../../test_dataset/A_Bark_01.wav", 1, 1)
